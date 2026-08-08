@@ -33,19 +33,20 @@ export interface AppConfig {
 }
 
 export const APP_CONFIG_DEFAULTS: AppConfig = {
-  companyName: 'Murf AI',
-  pageTitle: 'Voice Agent Starter',
-  pageDescription: 'A voice agent powered by Murf Falcon — the fastest TTS API',
+  companyName: 'Care Voice',
+  pageTitle: 'Care Voice — Your AI Health Companion',
+  pageDescription:
+    'Care Voice is a friendly AI health voice assistant for seniors in India. Medicine reminders, healthy lifestyle tips, wellness guidance, and multilingual support.',
 
-  supportsChatInput: true,
-  supportsVideoInput: true,
-  supportsScreenShare: true,
+  supportsChatInput: false,
+  supportsVideoInput: false,
+  supportsScreenShare: false,
   isPreConnectBufferEnabled: true,
 
   logo: '/murf-logo.svg',
-  accent: '#6366F1',
+  accent: '#3B82C4',
   logoDark: '/murf-logo-dark.svg',
-  accentDark: '#818cf8',
+  accentDark: '#4ADE80',
   startButtonText: 'Start talking',
 
   // optional: audio visualization configuration
