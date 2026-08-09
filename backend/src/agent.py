@@ -8,11 +8,14 @@ from livekit.agents import (
     AgentSession,
     JobContext,
     JobProcess,
+    RunContext,
     cli,
+    function_tool,
     inference,
     tokenize,
     room_io,
 )
+from memory import get_user_memory, save_user_memory
 from livekit.plugins import murf, silero, google, deepgram, noise_cancellation
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
@@ -84,26 +87,25 @@ STYLE
 If a user mentions their age, medication schedule, sleep routine, or water intake goals during the conversation, remember it within the current session and use it to provide more personalized reminders.
 """
 class Assistant(Agent):
-    def __init__(self) -> None:
-        super().__init__(instructions=SYSTEM_PROMPT)
+    def __init__(self, instructions: str, user_id: str) -> None:
+        super().__init__(instructions=instructions)
+        self.user_id = user_id
 
-    # To add tools, use the @function_tool decorator.
-    # Here's an example that adds a simple weather tool.
-    # You also have to add `from livekit.agents import function_tool, RunContext` to the top of this file
-    # @function_tool
-    # async def lookup_weather(self, context: RunContext, location: str):
-    #     """Use this tool to look up current weather information in the given location.
-    #
-    #     If the location is not supported by the weather service, the tool will indicate this. You must tell the user the location's weather is unavailable.
-    #
-    #     Args:
-    #         location: The location to look up weather information for (e.g. city name)
-    #     """
-    #
-    #     logger.info(f"Looking up weather for {location}")
-    #
-    #     return "sunny with a temperature of 70 degrees."
+    @function_tool
+    async def save_memory(self, context: RunContext, name: str, memory_summary: str):
+        """Call this ONLY immediately after the user has explicitly said yes to the
+        question "Can I remember information from our conversations so I can assist
+        you better next time?" Never call it if they said no or weren't asked.
 
+        Args:
+            name: The user's first name, as they told you.
+            memory_summary: A short (1-2 sentence) summary of health-relevant facts
+                they shared, e.g. recurring symptoms or a medication routine. Do not
+                include the full conversation transcript.
+        """
+        save_user_memory(self.user_id, name, memory_summary)
+        logger.info(f"Saved memory for user {self.user_id}")
+        return "Got it, I'll remember that."
 
 server = AgentServer()
 
@@ -122,6 +124,35 @@ async def my_agent(ctx: JobContext):
     ctx.log_context_fields = {
         "room": ctx.room.name,
     }
+
+    await ctx.connect()
+    participant = await ctx.wait_for_participant()
+    user_id = participant.identity
+
+    existing = get_user_memory(user_id)
+    if existing:
+        memory_block = f"""
+RETURNING USER CONTEXT
+This user has spoken with you before.
+Name: {existing['name']}
+What you remember about them: {existing['memory_summary']}
+Greet them by name and briefly reference what you remember, then ask how they've
+been since then. Do not ask the consent question again this session unless they
+share new information — then confirm and call save_memory again.
+"""
+    else:
+        memory_block = """
+NEW USER
+You have no memory of this user yet.
+If, during the conversation, they share their name along with personal health
+information (symptoms, routines, medication schedule, etc.), ask this exact
+question once: "Can I remember information from our conversations so I can assist
+you better next time?"
+If they say yes, call the save_memory tool with their name and a short summary.
+If they say no, do not save anything and do not ask again this session.
+"""
+
+    instructions = SYSTEM_PROMPT + "\n" + memory_block
 
     # Set up a voice AI pipeline using Murf Falcon, Gemini, Deepgram, and the LiveKit turn detector
     session = AgentSession(
@@ -173,7 +204,7 @@ async def my_agent(ctx: JobContext):
 
     # Start the session, which initializes the voice pipeline and warms up the models
     await session.start(
-        agent=Assistant(),
+        agent=Assistant(instructions=instructions, user_id=user_id),
         room=ctx.room,
         room_options=room_io.RoomOptions(
             audio_input=room_io.AudioInputOptions(
@@ -186,9 +217,6 @@ async def my_agent(ctx: JobContext):
             ),
         ),
     )
-
-    # Join the room and connect to the user
-    await ctx.connect()
 
 
 if __name__ == "__main__":

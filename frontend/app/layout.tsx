@@ -29,14 +29,14 @@ export default async function RootLayout({ children }: RootLayoutProps) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`light ${nunito.variable} ${nunitoSans.variable}`}
+      className={`dark ${nunito.variable} ${nunitoSans.variable}`}
     >
       <head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
       </head>
       <body className="bg-background font-sans antialiased">
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           {children}
         </ThemeProvider>
       </body>

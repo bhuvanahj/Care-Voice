@@ -121,14 +121,18 @@ export function useInputControls({
     [cameraToggle, screenShareToggle, saveVideoInputEnabled]
   );
 
-  const handleToggleMicrophone = useCallback(
-    async (enabled?: boolean) => {
-      await microphoneToggle.toggle(enabled);
-      // persist audio input enabled preference
-      saveAudioInputEnabled(!microphoneToggle.enabled);
-    },
-    [microphoneToggle, saveAudioInputEnabled]
-  );
+const handleToggleMicrophone = useCallback(
+  async (enabled?: boolean) => {
+    const target = enabled !== undefined ? enabled : !microphoneToggle.enabled;
+    try {
+      await microphoneToggle.toggle(target);
+      saveAudioInputEnabled(target);
+    } catch (err) {
+      console.error(err);
+    }
+  },
+  [microphoneToggle, saveAudioInputEnabled]
+);
 
   const handleToggleScreenShare = useCallback(
     async (enabled?: boolean) => {

@@ -31,3 +31,7 @@ KMS
 
 # GitHub CLI
 .github/personal-instructions.md
+.venv311/
+.venv/
+care_voice.db
+__pycache__/

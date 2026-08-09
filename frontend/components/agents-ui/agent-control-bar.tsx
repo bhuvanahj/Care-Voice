@@ -285,15 +285,15 @@ export function AgentControlBar({
   }
 
   return (
-    <div
-      aria-label="Voice assistant controls"
-      className={cn(
-        'bg-background border-input/50 dark:border-muted flex flex-col border p-3 drop-shadow-md/3',
-        variant === 'livekit' ? 'rounded-[31px]' : 'rounded-lg',
-        className
-      )}
-      {...props}
-    >
+  <div
+  aria-label="Voice assistant controls"
+  className={cn(
+    'bg-background border-input/50 dark:border-muted flex flex-col border p-3 drop-shadow-md/3 relative z-[100]',
+    variant === 'livekit' ? 'rounded-[31px]' : 'rounded-lg',
+    className
+  )}
+  {...props}
+>
       <motion.div
         {...MOTION_PROPS}
         inert={!(isChatOpen || isChatOpenUncontrolled)}

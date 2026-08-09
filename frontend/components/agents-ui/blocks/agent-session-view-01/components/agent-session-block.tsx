@@ -259,14 +259,17 @@ export function AgentSessionView_01({
         )}
         <div className="bg-background relative mx-auto max-w-2xl pb-3 md:pb-12">
           <Fade bottom className="absolute inset-x-0 top-0 h-4 -translate-y-full" />
-          <AgentControlBar
-            variant="livekit"
-            controls={controls}
-            isChatOpen={chatOpen}
-            isConnected={session.isConnected}
-            onDisconnect={session.end}
-            onIsChatOpenChange={setChatOpen}
-          />
+       <AgentControlBar
+  variant="livekit"
+  controls={controls}
+  isChatOpen={chatOpen}
+  isConnected={session.isConnected}
+  onDisconnect={async () => {
+    setChatOpen(false);
+    await session.end();
+  }}
+  onIsChatOpenChange={setChatOpen}
+/>
         </div>
       </motion.div>
     </section>

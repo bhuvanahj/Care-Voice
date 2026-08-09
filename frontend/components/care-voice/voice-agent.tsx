@@ -119,34 +119,45 @@ export function VoiceAgent() {
     (state === 'connecting' || state === 'listening' || state === 'speaking' || isStarting);
   const isEnded = state === 'ended';
 
-  const handleMicClick = async () => {
-    if (isActive) {
-      clearEndedTimer();
-      setIsStarting(false);
+const handleMicClick = async () => {
+  // End call if already connected
+  if (session.isConnected) {
+    try {
       await session.end();
       setShowEnded(true);
-      endedTimer.current = setTimeout(() => setShowEnded(false), 2600);
-      return;
+
+      endedTimer.current = setTimeout(() => {
+        setShowEnded(false);
+      }, 2600);
+    } catch (error) {
+      console.error("Failed to end session:", error);
     }
+    return;
+  }
 
-    setPermissionError(false);
-    setIsStarting(true);
+  // Start call
+  setPermissionError(false);
+  setIsStarting(true);
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((track) => track.stop());
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+    });
 
-      await session.start({
-        tracks: {
-          microphone: { enabled: true },
-        },
-      });
-    } catch {
-      setPermissionError(true);
-    } finally {
-      setIsStarting(false);
-    }
-  };
+    stream.getTracks().forEach((track) => track.stop());
+
+    await session.start({
+      tracks: {
+        microphone: { enabled: true },
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    setPermissionError(true);
+  } finally {
+    setIsStarting(false);
+  }
+};
 
   const config = STATE_CONFIG[state];
 
