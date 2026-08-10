@@ -35,7 +35,45 @@ flowchart LR
 ```
 
 ---
+---
 
+## Day 5 — Tool Calling
+
+Care Voice now includes a `check_symptom_triage` function tool that helps
+evaluate user-reported symptoms and determine an appropriate triage level.
+
+The agent can automatically call the tool when a user's symptoms require
+triage and then explain the result naturally through voice.
+
+### Data Source
+
+The symptom triage tool currently uses a **local rule-based dataset**.
+It does not depend on a live external healthcare API.
+
+### Failure Handling
+
+If the tool cannot determine an appropriate result, Care Voice provides a
+safe fallback response instead of inventing medical information and
+encourages the user to seek professional medical advice when appropriate.
+
+### Example
+
+User: "I have a cough."
+
+The agent automatically calls:
+
+`check_symptom_triage(symptoms="cough")`
+
+The result is then passed back to the agent and delivered naturally through
+Murf Falcon voice.
+
+### Day 5 Test
+
+The tool was successfully tested through a real voice interaction, with
+the agent automatically calling `check_symptom_triage` based on the user's
+reported symptom.
+
+---
 ## Quickstart
 
 ### Prerequisites
