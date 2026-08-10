@@ -1,98 +1,299 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { AnimatePresence, motion } from 'motion/react';
 import { useSessionContext } from '@livekit/components-react';
 import type { AppConfig } from '@/app-config';
 import { AgentSessionView_01 } from '@/components/agents-ui/blocks/agent-session-view-01';
-import { CARE_VOICE_STATE_CONFIG } from '@/components/care-voice/care-voice-state';
-import { CareVoiceHeader } from '@/components/care-voice/care-voice-header';
-import { StatusIndicators } from '@/components/care-voice/status-indicators';
-import { useCareVoiceState } from '@/components/care-voice/use-care-voice-state';
 import { WelcomeView } from '@/components/app/welcome-view';
+
+type AppState = 'ready' | 'connecting' | 'connected' | 'ended' | 'mic-error';
 
 const MotionWelcomeView = motion.create(WelcomeView);
 const MotionSessionView = motion.create(AgentSessionView_01);
 
-const VIEW_MOTION_PROPS = {
-  variants: {
-    visible: { opacity: 1 },
-    hidden: { opacity: 0 },
-  },
+const FADE = {
+  variants: { visible: { opacity: 1 }, hidden: { opacity: 0 } },
   initial: 'hidden',
   animate: 'visible',
   exit: 'hidden',
-  transition: { duration: 0.5, ease: 'linear' },
+  transition: { duration: 0.45, ease: 'easeInOut' },
 };
 
+// ── Connecting screen ─────────────────────────────────────────────────────────
+function ConnectingView() {
+  const steps = ['Connecting to Care Voice...', 'Setting up your voice...', 'Almost ready...'];
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setStep((s) => Math.min(s + 1, steps.length - 1)), 1400);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="flex flex-col items-center gap-6"
+      >
+        {/* Pulsing logo */}
+        <div className="relative">
+          <motion.div
+            className="absolute inset-0 rounded-full"
+            style={{ background: 'radial-gradient(circle, rgba(13,148,136,0.4) 0%, transparent 70%)' }}
+            animate={{ scale: [1, 1.6, 1], opacity: [0.6, 0, 0.6] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          />
+          <div className="relative w-20 h-20 rounded-2xl flex items-center justify-center text-4xl shadow-xl"
+            style={{ background: 'linear-gradient(135deg, #1e293b, #0d9488)' }}>
+            🏥
+          </div>
+        </div>
+
+        {/* Spinner dots */}
+        <div className="flex gap-2">
+          {[0, 1, 2].map((i) => (
+            <motion.div
+              key={i}
+              className="w-2.5 h-2.5 rounded-full"
+              style={{ background: i === 0 ? '#1e293b' : i === 1 ? '#0d9488' : '#5eead4' }}
+              animate={{ y: [0, -10, 0], opacity: [0.4, 1, 0.4] }}
+              transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.2 }}
+            />
+          ))}
+        </div>
+
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={step}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="text-sm font-medium text-muted-foreground"
+          >
+            {steps[step]}
+          </motion.p>
+        </AnimatePresence>
+
+        <p className="text-xs text-muted-foreground/60">Powered by Murf Falcon</p>
+      </motion.div>
+    </div>
+  );
+}
+
+// ── Mic error screen ──────────────────────────────────────────────────────────
+function MicErrorView({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="fixed inset-0 flex flex-col items-center justify-center px-6 bg-gradient-to-br from-slate-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="w-full max-w-sm text-center"
+      >
+        <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-3xl mx-auto mb-4">
+          🎙️
+        </div>
+        <h2 className="text-xl font-bold text-foreground mb-2">Microphone Access Needed</h2>
+        <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+          Care Voice needs your microphone to hear you. Your browser has blocked access.
+        </p>
+
+        <div className="bg-card border border-border rounded-2xl p-4 text-left mb-6 space-y-3">
+          <p className="text-xs font-semibold text-foreground uppercase tracking-wider">How to fix this:</p>
+          {[
+            { icon: '🔒', text: 'Click the lock icon in your browser address bar' },
+            { icon: '🎙️', text: 'Set Microphone to "Allow"' },
+            { icon: '🔄', text: 'Refresh the page and try again' },
+          ].map((s) => (
+            <div key={s.text} className="flex items-start gap-3">
+              <span className="text-base mt-0.5">{s.icon}</span>
+              <p className="text-xs text-muted-foreground">{s.text}</p>
+            </div>
+          ))}
+        </div>
+
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={onRetry}
+          className="w-full py-3 rounded-xl text-white font-bold text-sm cursor-pointer"
+          style={{ background: 'linear-gradient(135deg, #1e293b, #0d9488)' }}
+        >
+          Try Again
+        </motion.button>
+      </motion.div>
+    </div>
+  );
+}
+
+// ── Call ended screen ─────────────────────────────────────────────────────────
+function CallEndedView({ onRestart }: { onRestart: () => void }) {
+  const tips = [
+    'Ask health questions naturally',
+    'Conversation memory enabled',
+    'Multilingual voice support',
+    'Available anytime you need help'
+  ];
+  const [tip] = useState(() => tips[Math.floor(Math.random() * tips.length)]);
+
+  return (
+    <div className="fixed inset-0 flex flex-col items-center justify-center px-6 bg-gradient-to-br from-slate-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 200 }}
+        className="w-full max-w-sm text-center"
+      >
+        {/* Checkmark */}
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
+          className="w-16 h-16 rounded-full flex items-center justify-center text-3xl mx-auto mb-4"
+          style={{ background: 'linear-gradient(135deg, #0d9488, #115e59)' }}
+        >
+          ✓
+        </motion.div>
+
+        <h2 className="text-2xl font-bold text-foreground mb-1">Call Ended</h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          Thank you for using Care Voice. Stay healthy!
+        </p>
+
+        {/* Health tip */}
+        <div className="bg-card border border-border rounded-2xl p-4 mb-6 text-left"
+          style={{ borderLeft: '3px solid #0d9488' }}>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Health Tip</p>
+          <p className="text-sm text-foreground">{tip}</p>
+        </div>
+
+        {/* Emergency numbers */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          {[
+            { label: 'Emergency', number: '112', color: '#dc2626' },
+            { label: 'Health Helpline', number: '104', color: '#0d9488' },
+          ].map((e) => (
+            <a key={e.number} href={`tel:${e.number}`}
+              className="flex flex-col items-center p-3 rounded-xl border border-border bg-card hover:bg-accent transition-colors">
+              <span className="text-lg font-black" style={{ color: e.color }}>{e.number}</span>
+              <span className="text-xs text-muted-foreground">{e.label}</span>
+            </a>
+          ))}
+        </div>
+
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={onRestart}
+          className="w-full py-3 rounded-xl text-white font-bold text-sm cursor-pointer"
+          style={{ background: 'linear-gradient(135deg, #1e293b, #0d9488)' }}
+        >
+          🎙️ Start New Conversation
+        </motion.button>
+      </motion.div>
+    </div>
+  );
+}
+
+// ── Main controller ───────────────────────────────────────────────────────────
 interface ViewControllerProps {
   appConfig: AppConfig;
 }
 
 export function ViewController({ appConfig }: ViewControllerProps) {
-  const { isConnected } = useSessionContext();
+  const { isConnected, start, end } = useSessionContext();
   const { resolvedTheme } = useTheme();
-  const { state, permissionError, isStarting, handleStartCall } = useCareVoiceState();
+  const [appState, setAppState] = useState<AppState>('ready');
+
+  // Sync connected state
+  useEffect(() => {
+    if (isConnected && appState === 'connecting') {
+      setAppState('connected');
+    }
+  }, [isConnected, appState]);
+
+  const handleStart = async () => {
+    // Check mic permission first
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      setAppState('mic-error');
+      return;
+    }
+    setAppState('connecting');
+    start();
+  };
+
+  const handleEnd = () => {
+    end();
+    setAppState('ended');
+  };
+
+  const handleRestart = () => {
+    setAppState('ready');
+  };
 
   return (
-    <div className="relative flex min-h-svh flex-col bg-background">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,oklch(0.58_0.14_245/0.12),transparent_55%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,oklch(0.68_0.15_155/0.08),transparent_50%)]" />
+    <AnimatePresence mode="wait">
+      {/* READY */}
+      {appState === 'ready' && (
+        <MotionWelcomeView
+          key="welcome"
+          {...FADE}
+          startButtonText={appConfig.startButtonText}
+          onStartCall={handleStart}
+        />
+      )}
 
-      <CareVoiceHeader />
+      {/* CONNECTING */}
+      {appState === 'connecting' && (
+        <motion.div key="connecting" {...FADE}>
+          <ConnectingView />
+        </motion.div>
+      )}
 
-      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 py-8">
-        <StatusIndicators state={state} className="mb-8" />
+      {/* CONNECTED / LISTENING / SPEAKING */}
+      {appState === 'connected' && (
+        <MotionSessionView
+          key="session"
+          {...FADE}
+          supportsChatInput={appConfig.supportsChatInput}
+          supportsVideoInput={appConfig.supportsVideoInput}
+          supportsScreenShare={appConfig.supportsScreenShare}
+          isPreConnectBufferEnabled={appConfig.isPreConnectBufferEnabled}
+          audioVisualizerType={appConfig.audioVisualizerType}
+          audioVisualizerColor={
+            resolvedTheme === 'dark'
+              ? appConfig.audioVisualizerColorDark
+              : appConfig.audioVisualizerColor
+          }
+          audioVisualizerColorShift={appConfig.audioVisualizerColorShift}
+          audioVisualizerBarCount={appConfig.audioVisualizerBarCount}
+          audioVisualizerGridRowCount={appConfig.audioVisualizerGridRowCount}
+          audioVisualizerGridColumnCount={appConfig.audioVisualizerGridColumnCount}
+          audioVisualizerRadialBarCount={appConfig.audioVisualizerRadialBarCount}
+          audioVisualizerRadialRadius={appConfig.audioVisualizerRadialRadius}
+          audioVisualizerWaveLineWidth={appConfig.audioVisualizerWaveLineWidth}
+          onCallEnd={handleEnd}
+          className="fixed inset-0"
+        />
+      )}
 
-        <p className="mb-6 max-w-md text-center text-sm text-muted-foreground">
-          {CARE_VOICE_STATE_CONFIG[state].hint}
-        </p>
+      {/* MIC ERROR */}
+      {appState === 'mic-error' && (
+        <motion.div key="mic-error" {...FADE}>
+          <MicErrorView onRetry={() => setAppState('ready')} />
+        </motion.div>
+      )}
 
-        <AnimatePresence mode="wait">
-          {!isConnected && (
-            <MotionWelcomeView
-              key="welcome"
-              {...VIEW_MOTION_PROPS}
-              startButtonText={appConfig.startButtonText}
-              onStartCall={handleStartCall}
-              isStarting={isStarting}
-              permissionError={permissionError}
-            />
-          )}
-          {isConnected && (
-            <MotionSessionView
-              key="session-view"
-              {...VIEW_MOTION_PROPS}
-              preConnectMessage="Care Voice is listening — ask about your health or wellness"
-              supportsChatInput={appConfig.supportsChatInput}
-              supportsVideoInput={appConfig.supportsVideoInput}
-              supportsScreenShare={appConfig.supportsScreenShare}
-              isPreConnectBufferEnabled={appConfig.isPreConnectBufferEnabled}
-              audioVisualizerType={appConfig.audioVisualizerType ?? 'aura'}
-              audioVisualizerColor={
-                resolvedTheme === 'dark'
-                  ? (appConfig.audioVisualizerColorDark ?? '#4ADE80')
-                  : (appConfig.audioVisualizerColor ?? '#3B82C4')
-              }
-              audioVisualizerColorShift={appConfig.audioVisualizerColorShift}
-              audioVisualizerBarCount={appConfig.audioVisualizerBarCount}
-              audioVisualizerGridRowCount={appConfig.audioVisualizerGridRowCount}
-              audioVisualizerGridColumnCount={appConfig.audioVisualizerGridColumnCount}
-              audioVisualizerRadialBarCount={appConfig.audioVisualizerRadialBarCount}
-              audioVisualizerRadialRadius={appConfig.audioVisualizerRadialRadius}
-              audioVisualizerWaveLineWidth={appConfig.audioVisualizerWaveLineWidth}
-              className="fixed inset-0 top-[52px]"
-            />
-          )}
-        </AnimatePresence>
-      </main>
-
-      <footer className="relative z-10 border-t border-border/30 px-6 py-4 text-center">
-        <p className="mx-auto max-w-lg text-xs leading-relaxed text-muted-foreground">
-          Care Voice offers general wellness support and is not a substitute for professional
-          medical advice.
-        </p>
-      </footer>
-    </div>
+      {/* CALL ENDED */}
+      {appState === 'ended' && (
+        <motion.div key="ended" {...FADE}>
+          <CallEndedView onRestart={handleRestart} />
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

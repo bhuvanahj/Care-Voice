@@ -1,74 +1,375 @@
-import { AlertTriangle, HeartPulse, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/shadcn/utils';
+'use client';
+
+'use client';
+
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { motion, AnimatePresence, useMotionValue, useSpring } from 'motion/react';
+
+const SAMPLE_PROMPTS = [
+  { text: 'I have a headache. What can I do?', icon: '🤕' },
+{ text: 'Explain my medicine in simple words', icon: '💊' },
+{ text: 'Can I take this medicine after food?', icon: '🍽️' },
+{ text: 'What should I eat during a fever?', icon: '🍲' },
+{ text: 'Help me understand my prescription', icon: '📋' },
+{ text: 'Translate this health advice to Kannada', icon: '🗣️' },
+];
+
+const STATS = [
+  { value: '2', label: 'Languages' },
+{ value: 'Voice', label: 'First' },
+{ value: 'AI', label: 'Powered' },
+{ value: 'Live', label: 'Responses' },
+];
 
 interface WelcomeViewProps {
   startButtonText: string;
   onStartCall: () => void;
-  isStarting?: boolean;
-  permissionError?: boolean;
+}
+
+function Particle({ x, y, size, duration, delay }: { x: number; y: number; size: number; duration: number; delay: number }) {
+  return (
+    <motion.div
+      className="absolute rounded-full pointer-events-none"
+      style={{
+        left: `${x}%`,
+        top: `${y}%`,
+        width: size,
+        height: size,
+        background: 'radial-gradient(circle, rgba(13,148,136,0.55) 0%, rgba(30,41,59,0.25) 100%)',
+      }}
+      animate={{
+        y: [0, -30, 0],
+        opacity: [0, 0.8, 0],
+        scale: [0, 1, 0],
+      }}
+      transition={{
+        duration,
+        delay,
+        repeat: Infinity,
+        ease: 'easeInOut',
+      }}
+    />
+  );
 }
 
 export const WelcomeView = ({
   startButtonText,
   onStartCall,
-  isStarting = false,
-  permissionError = false,
   ref,
 }: React.ComponentProps<'div'> & WelcomeViewProps) => {
+  const [promptIndex, setPromptIndex] = useState(0);
+  const [isPressed, setIsPressed] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const springX = useSpring(mouseX, { stiffness: 50, damping: 20 });
+  const springY = useSpring(mouseY, { stiffness: 50, damping: 20 });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPromptIndex((i) => (i + 1) % SAMPLE_PROMPTS.length);
+    }, 2800);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width - 0.5) * 20;
+      const y = ((e.clientY - rect.top) / rect.height - 0.5) * 20;
+      mouseX.set(x);
+      mouseY.set(y);
+      setMousePos({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [mouseX, mouseY]);
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const particles = useMemo(() => Array.from({ length: 12 }, () => ({
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: Math.random() * 6 + 3,
+    duration: Math.random() * 3 + 2,
+    delay: Math.random() * 4,
+  })), []);
+
   return (
-    <div ref={ref} className="flex w-full max-w-md flex-col items-center text-center">
-      <section className="flex flex-col items-center">
-        <span
-          className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/30"
-          aria-hidden="true"
-        >
-          <HeartPulse className="h-10 w-10" />
-        </span>
+    <div ref={ref} className="relative w-full min-h-screen overflow-hidden flex items-center justify-center">
 
-        <h1 className="font-heading text-2xl font-extrabold text-foreground sm:text-3xl">
-          Talk to your health helper
-        </h1>
-        <p className="mt-3 max-w-sm text-pretty text-sm leading-relaxed text-muted-foreground">
-          Care Voice listens and speaks with you in your own language. Ask about medicines,
-          wellness, and daily health — anytime.
-        </p>
+      {/* Deep gradient background */}
+<div className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950"></div>
+      {/* Mesh gradient orbs */}
+      <motion.div
+        className="absolute top-0 left-0 w-[700px] h-[700px] rounded-full blur-3xl opacity-30 dark:opacity-15 pointer-events-none"
+        style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', x: springX, y: springY }}
+      />
+      <motion.div
+        className="absolute bottom-0 right-0 w-[600px] h-[600px] rounded-full blur-3xl opacity-25 dark:opacity-10 pointer-events-none"
+        style={{ background: 'radial-gradient(circle, #1e293b 0%, transparent 70%)' }}
+        animate={{ scale: [1, 1.15, 1] }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <motion.div
+        className="absolute top-1/3 right-1/4 w-[400px] h-[400px] rounded-full blur-3xl opacity-20 dark:opacity-10 pointer-events-none"
+        style={{ background: 'radial-gradient(circle, #2dd4bf 0%, transparent 70%)' }}
+        animate={{ scale: [1, 1.2, 1], x: [0, 30, 0] }}
+        transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+      />
 
-        <Button
-          size="lg"
-          onClick={onStartCall}
-          disabled={isStarting}
-          className={cn(
-            'mt-8 h-12 w-64 rounded-full text-sm font-bold tracking-wide uppercase',
-            'bg-primary text-primary-foreground shadow-[0_0_24px_oklch(0.58_0.14_245/0.35)]',
-            'hover:bg-primary/90 hover:shadow-[0_0_32px_oklch(0.58_0.14_245/0.45)]'
-          )}
-        >
-          {isStarting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Connecting…
-            </>
-          ) : (
-            startButtonText
-          )}
-        </Button>
-      </section>
+      {/* Floating particles — client only to avoid hydration mismatch */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden" ref={containerRef}>
+        {mounted && particles.map((p, i) => <Particle key={i} {...p} />)}
+      </div>
 
-      {permissionError && (
-        <div
-          role="alert"
-          className="mt-8 flex w-full items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-left"
-        >
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
-          <div>
-            <p className="text-sm font-semibold text-destructive">Microphone needed</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Microphone access is required. Please allow permission and try again.
+      {/* Grid pattern overlay */}
+      <div
+        className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none"
+        style={{
+          backgroundImage: 'linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+        }}
+      />
+
+      {/* Main content */}
+      <div className="relative z-10 w-full max-w-5xl mx-auto px-4 py-12 flex flex-col lg:flex-row items-center gap-12">
+
+        {/* Left column */}
+        <div className="flex-1 text-center lg:text-left">
+
+          {/* Badge */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold mb-6 border bg-teal-50 border-teal-200 text-teal-700 dark:bg-teal-950/40 dark:border-teal-800 dark:text-teal-300"
+          >
+            <motion.span
+              className="w-1.5 h-1.5 rounded-full bg-teal-600"
+              animate={{ opacity: [1, 0.4, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            />
+            AI Health Companion
+          </motion.div>
+
+          {/* Title */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <h1 className="text-6xl lg:text-7xl font-black tracking-tight text-foreground leading-none mb-2">
+              Care Voice
+            </h1>
+            <p className="text-xl text-muted-foreground font-light mb-1">Your AI Health Companion</p>
+            <p className="text-lg text-muted-foreground mb-6">
+              Voice AI Health Assistant for <span className="font-semibold text-foreground">India</span>
             </p>
-          </div>
+          </motion.div>
+
+          {/* Description */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-muted-foreground text-sm leading-relaxed mb-8 max-w-md mx-auto lg:mx-0"
+          >
+            Speak naturally in Kannada or English. Care Voice helps explain symptoms, medicines, and health information through simple voice conversations.
+          </motion.p>
+
+          {/* Stats row */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="flex gap-6 justify-center lg:justify-start mb-10"
+          >
+            {STATS.map((s, i) => (
+              <motion.div
+                key={s.label}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.4 + i * 0.08 }}
+                className="text-center"
+              >
+                <div className="text-xl font-black text-foreground">{s.value}</div>
+                <div className="text-xs text-muted-foreground">{s.label}</div>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* CTA Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <motion.button
+              onTapStart={() => setIsPressed(true)}
+              onTap={() => setIsPressed(false)}
+              onTapCancel={() => setIsPressed(false)}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={onStartCall}
+              className="relative group inline-flex items-center gap-3 px-8 py-4 rounded-2xl text-white font-bold text-base shadow-2xl overflow-hidden cursor-pointer"
+              style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0d9488 100%)' }}
+            >
+              {/* Glow */}
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{ background: 'linear-gradient(135deg, #334155 0%, #14b8a6 100%)' }} />
+
+              {/* Pulse ring */}
+              <motion.div
+                className="absolute inset-0 rounded-2xl"
+                animate={{ boxShadow: isPressed ? '0 0 0 0px rgba(13,148,136,0.4)' : ['0 0 0 0px rgba(13,148,136,0.4)', '0 0 0 12px rgba(13,148,136,0)'] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              />
+
+              <motion.span
+                className="relative text-xl"
+                animate={{ rotate: isPressed ? [0, -15, 15, 0] : 0 }}
+                transition={{ duration: 0.4 }}
+              >
+                🎙️
+              </motion.span>
+              <span className="relative tracking-wide">{startButtonText}</span>
+              <motion.span
+                className="relative"
+                animate={{ x: [0, 4, 0] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+              >
+                →
+              </motion.span>
+            </motion.button>
+
+            <p className="text-xs text-muted-foreground mt-3">
+              No app needed · Just speak · Powered by{' '}
+              <a href="https://murf.ai/api" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground transition-colors">
+                Murf Falcon
+              </a>
+            </p>
+          </motion.div>
         </div>
-      )}
+
+        {/* Right column — interactive card */}
+        <motion.div
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
+          className="flex-1 w-full max-w-sm"
+          style={{ rotateX: springY, rotateY: springX, transformPerspective: 1000 }}
+        >
+          {/* Glass card */}
+          <div className="relative rounded-3xl overflow-hidden border border-white/40 dark:border-white/10 shadow-2xl"
+            style={{ background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(20px)' }}
+          >
+            <div className="dark:hidden absolute inset-0 rounded-3xl"
+              style={{ background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(20px)' }} />
+            <div className="hidden dark:block absolute inset-0 rounded-3xl"
+              style={{ background: 'rgba(15,15,15,0.7)', backdropFilter: 'blur(20px)' }} />
+
+            <div className="relative z-10 p-6">
+              {/* Card header */}
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-md"
+                  style={{ background: 'linear-gradient(135deg, #1e293b, #0d9488)' }}>
+                  🏥
+                </div>
+                <div>
+                  <p className="font-bold text-foreground text-sm">Care Voice</p>
+                  <div className="flex items-center gap-1.5">
+                    <motion.div
+                      className="w-2 h-2 rounded-full bg-green-500"
+                      animate={{ opacity: [1, 0.3, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    />
+                    <p className="text-xs text-muted-foreground">Ready to help</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Animated prompt */}
+              <div className="rounded-2xl p-4 mb-4 border border-border/50"
+                style={{ background: 'rgba(13,148,136,0.06)' }}>
+                <p className="text-xs text-muted-foreground mb-2 font-mono uppercase tracking-wider">Try asking...</p>
+                <div className="h-10 flex items-center overflow-hidden">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={promptIndex}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.35 }}
+                      className="flex items-center gap-2"
+                    >
+                      <span className="text-lg">{SAMPLE_PROMPTS[promptIndex].icon}</span>
+                      <p className="text-sm font-medium text-foreground leading-snug">
+                        &ldquo;{SAMPLE_PROMPTS[promptIndex].text}&rdquo;
+                      </p>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+                {/* Progress dots */}
+                <div className="flex gap-1 mt-3">
+                  {SAMPLE_PROMPTS.map((_, i) => (
+                    <motion.div
+                      key={i}
+                      className="h-1 rounded-full"
+                      animate={{
+                        width: i === promptIndex ? 20 : 6,
+                        background: i === promptIndex ? '#0d9488' : '#e5e7eb',
+                      }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Feature list */}
+              {[
+                { icon: '🎙️', text: 'Speak naturally in Kannada or English' },
+{ icon: '🩺', text: 'Health guidance through voice' },
+{ icon: '🔒', text: 'Private and secure conversations' },
+{ icon: '⚡', text: 'Real-time AI voice responses' },
+              ].map((f, i) => (
+                <motion.div
+                  key={f.text}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.6 + i * 0.1 }}
+                  className="flex items-center gap-3 py-2 border-b border-border/30 last:border-0"
+                >
+                  <span className="text-base">{f.icon}</span>
+                  <span className="text-xs text-muted-foreground">{f.text}</span>
+                  <motion.div
+                    className="ml-auto w-4 h-4 rounded-full flex items-center justify-center text-white text-xs"
+                    style={{ background: '#0d9488' }}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.8 + i * 0.1, type: 'spring' }}
+                  >
+                    ✓
+                  </motion.div>
+                </motion.div>
+              ))}
+
+              {/* Tech stack pills */}
+              <div className="flex flex-wrap gap-1.5 mt-4">
+                {['Murf Falcon', 'Deepgram', 'Groq LLaMA', 'LiveKit'].map((t) => (
+                  <span key={t} className="px-2 py-0.5 rounded-full text-xs border border-border/50 text-muted-foreground bg-background/50">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 };
