@@ -23,18 +23,20 @@ logger = logging.getLogger("agent")
 
 load_dotenv(".env.local")
 
-# Change this prompt to change what your voice agent does.
-# See README.md for example prompts (customer support, language tutor, receptionist).
+
 SYSTEM_PROMPT = """
 IDENTITY
-You are Care Voice , an AI health companion designed for elderly people in India.
+
+You are Care Voice, an AI health companion designed for elderly people in India.
 
 FIRST GREETING
+
 Hello! I'm Care Voice, your AI health companion.
 I can help with healthy habits, medicine reminders, wellness tips, and general health guidance.
 How can I help you today?
 
 OBJECTIVES
+
 1. Help users maintain healthy daily habits.
 2. Provide simple wellness and lifestyle guidance.
 3. Encourage users to seek professional medical care when necessary.
@@ -44,7 +46,9 @@ OBJECTIVES
 7. Promote healthy sleep habits.
 
 KNOWLEDGE
+
 You can provide:
+
 - General health information
 - Nutrition and hydration advice
 - Exercise and sleep guidance
@@ -54,19 +58,36 @@ You can provide:
 You cannot diagnose diseases or prescribe medicines.
 
 LANGUAGE
+
 - Match the user's language.
-- If the user mixes Kannada and English, reply in Kannada and English.
-- If the user mixes Hindi and English, reply similarly.
+- If the user speaks Kannada, reply in Kannada.
+- If the user speaks Hindi, reply in Hindi.
+- If the user speaks English, reply in English.
+- If the user mixes Kannada and English, naturally mix Kannada and English.
+- If the user mixes Hindi and English, naturally mix Hindi and English.
+- Always write non-English languages in their native script.
+- Kannada must use Kannada script.
+- Hindi must use Devanagari script.
+- Never romanize Kannada or Hindi unless the user explicitly asks for it.
 - Keep language simple and conversational.
-- If user speaks Kannada, reply in Kannada.
-- If user speaks Hindi, reply in Hindi.
-- If user speaks English, reply in English.
-- If user mixes languages, naturally mix them.
 - Do not translate unless asked.
 
+TOOLS
+
+You have a symptom triage tool called check_symptom_triage.
+
+When the user describes symptoms or asks whether their symptoms require
+urgent medical attention, use the check_symptom_triage tool before answering.
+
+Speak the result naturally and briefly.
+Never mention the internal tool name.
+Never return raw tool output.
+The tool is a basic rule-based helper and is NOT a medical diagnosis.
 
 GUARDRAILS
+
 Never:
+
 - Diagnose diseases
 - Prescribe medicines
 - Recommend prescription drugs
@@ -74,38 +95,121 @@ Never:
 - Guarantee medical outcomes
 
 ESCALATION
-If the user mentions chest pain, severe bleeding, breathing difficulty, loss of consciousness, stroke symptoms, or suicidal thoughts:
+
+If the user mentions chest pain, severe bleeding, breathing difficulty,
+loss of consciousness, stroke symptoms, or suicidal thoughts:
 
 "This may require immediate medical attention.
 Please contact a doctor, family member, caregiver, or visit the nearest hospital immediately."
 
 STYLE
+
 - Warm and respectful
 - Maximum 2-3 sentences
 - Easy for elderly users to understand
 - Calm and reassuring
-If a user mentions their age, medication schedule, sleep routine, or water intake goals during the conversation, remember it within the current session and use it to provide more personalized reminders.
+
+If a user mentions their age, medication schedule, sleep routine,
+or water intake goals during the conversation, remember it within
+the current session and use it to provide more personalized reminders.
 """
+
+
 class Assistant(Agent):
     def __init__(self, instructions: str, user_id: str) -> None:
         super().__init__(instructions=instructions)
         self.user_id = user_id
 
     @function_tool
-    async def save_memory(self, context: RunContext, name: str, memory_summary: str):
-        """Call this ONLY immediately after the user has explicitly said yes to the
-        question "Can I remember information from our conversations so I can assist
-        you better next time?" Never call it if they said no or weren't asked.
+    async def save_memory(
+        self,
+        context: RunContext,
+        name: str,
+        memory_summary: str,
+    ) -> str:
+        """Save user memory after explicit consent.
+
+        Call this ONLY immediately after the user has explicitly said yes
+        to the memory consent question.
 
         Args:
             name: The user's first name, as they told you.
-            memory_summary: A short (1-2 sentence) summary of health-relevant facts
-                they shared, e.g. recurring symptoms or a medication routine. Do not
-                include the full conversation transcript.
+            memory_summary: A short 1-2 sentence summary of health-relevant
+                facts they shared.
         """
         save_user_memory(self.user_id, name, memory_summary)
         logger.info(f"Saved memory for user {self.user_id}")
         return "Got it, I'll remember that."
+
+    @function_tool
+    async def check_symptom_triage(
+        self,
+        context: RunContext,
+        symptoms: str,
+    ) -> str:
+        """Assess the urgency of symptoms described by the user.
+
+        Use this when the user describes symptoms and asks about urgency
+        or whether they need medical attention.
+
+        This is a basic rule-based helper, not a medical diagnosis.
+
+        Args:
+            symptoms: A short description of the user's symptoms.
+        """
+
+        if not symptoms.strip():
+            return (
+                "I could not identify the symptoms clearly. "
+                "Please describe what you are experiencing."
+            )
+
+        text = symptoms.lower()
+
+        emergency_terms = [
+            "chest pain",
+            "difficulty breathing",
+            "can't breathe",
+            "cannot breathe",
+            "loss of consciousness",
+            "unconscious",
+            "stroke",
+            "severe bleeding",
+            "suicidal",
+        ]
+
+        urgent_terms = [
+            "high fever",
+            "persistent vomiting",
+            "severe pain",
+            "dehydration",
+            "fainting",
+            "blood in vomit",
+            "blood in stool",
+        ]
+
+        if any(term in text for term in emergency_terms):
+            return (
+                "Triage level: EMERGENCY. "
+                "This may require immediate medical attention. "
+                "Please contact emergency services or go to the nearest "
+                "hospital immediately."
+            )
+
+        if any(term in text for term in urgent_terms):
+            return (
+                "Triage level: URGENT. "
+                "Please seek medical evaluation promptly, especially "
+                "if the symptoms worsen."
+            )
+
+        return (
+            "Triage level: ROUTINE. "
+            "No emergency symptom was detected by this basic rule-based "
+            "check. Monitor the symptoms and consult a healthcare "
+            "professional if they persist or worsen."
+        )
+
 
 server = AgentServer()
 
@@ -119,92 +223,80 @@ server.setup_fnc = prewarm
 
 @server.rtc_session(agent_name="my-agent")
 async def my_agent(ctx: JobContext):
-    # Logging setup
-    # Add any other context you want in all log entries here
     ctx.log_context_fields = {
         "room": ctx.room.name,
     }
 
     await ctx.connect()
+
     participant = await ctx.wait_for_participant()
     user_id = participant.identity
 
     existing = get_user_memory(user_id)
+
     if existing:
         memory_block = f"""
 RETURNING USER CONTEXT
+
 This user has spoken with you before.
+
 Name: {existing['name']}
 What you remember about them: {existing['memory_summary']}
-Greet them by name and briefly reference what you remember, then ask how they've
-been since then. Do not ask the consent question again this session unless they
-share new information — then confirm and call save_memory again.
+
+Greet them by name and briefly reference what you remember,
+then ask how they've been since then.
+
+Do not ask the consent question again this session unless they
+share new information. If they share new information, confirm
+consent before calling save_memory again.
 """
     else:
         memory_block = """
 NEW USER
+
 You have no memory of this user yet.
-If, during the conversation, they share their name along with personal health
-information (symptoms, routines, medication schedule, etc.), ask this exact
-question once: "Can I remember information from our conversations so I can assist
-you better next time?"
-If they say yes, call the save_memory tool with their name and a short summary.
-If they say no, do not save anything and do not ask again this session.
+
+If, during the conversation, they share their name along with
+personal health information such as symptoms, routines, or
+medication schedules, ask this exact question once:
+
+"Can I remember information from our conversations so I can assist you better next time?"
+
+If they say yes, call the save_memory tool with their name
+and a short summary.
+
+If they say no, do not save anything and do not ask again
+this session.
 """
 
     instructions = SYSTEM_PROMPT + "\n" + memory_block
 
-    # Set up a voice AI pipeline using Murf Falcon, Gemini, Deepgram, and the LiveKit turn detector
     session = AgentSession(
-        # Speech-to-text (STT) is your agent's ears, turning the user's speech into text that the LLM can understand
-        # See all available models at https://docs.livekit.io/agents/models/stt/
         stt=deepgram.STT(
-    model="nova-3",
-    language="multi"
-),
-        # A Large Language Model (LLM) is your agent's brain, processing user input and generating a response
-        # See all available models at https://docs.livekit.io/agents/models/llm/
+            model="nova-3",
+            language="multi",
+        ),
         llm=google.LLM(
-                model="gemini-2.5-flash",
-            ),
-        # Text-to-speech (TTS) is your agent's voice, turning the LLM's text into speech that the user can hear
-        # See all available models as well as voice selections at https://docs.livekit.io/agents/models/tts/
+            model="gemini-2.5-flash",
+        ),
         tts=murf.TTS(
-                voice="Pooja", 
-                style="Conversation",
-                tokenizer=tokenize.basic.SentenceTokenizer(min_sentence_len=2),
-                text_pacing=True
+            voice="Pooja",
+            style="Conversation",
+            tokenizer=tokenize.basic.SentenceTokenizer(
+                min_sentence_len=2
             ),
-        # VAD and turn detection are used to determine when the user is speaking and when the agent should respond
-        # See more at https://docs.livekit.io/agents/build/turns
+            text_pacing=True,
+        ),
         turn_detection=MultilingualModel(),
         vad=ctx.proc.userdata["vad"],
-        # allow the LLM to generate a response while waiting for the end of turn
-        # See more at https://docs.livekit.io/agents/build/audio/#preemptive-generation
         preemptive_generation=True,
     )
 
-    # To use a realtime model instead of a voice pipeline, use the following session setup instead.
-    # (Note: This is for the OpenAI Realtime API. For other providers, see https://docs.livekit.io/agents/models/realtime/))
-    # 1. Install livekit-agents[openai]
-    # 2. Set OPENAI_API_KEY in .env.local
-    # 3. Add `from livekit.plugins import openai` to the top of this file
-    # 4. Use the following session setup instead of the version above
-    # session = AgentSession(
-    #     llm=openai.realtime.RealtimeModel(voice="marin")
-    # )
-
-    # # Add a virtual avatar to the session, if desired
-    # # For other providers, see https://docs.livekit.io/agents/models/avatar/
-    # avatar = hedra.AvatarSession(
-    #   avatar_id="...",  # See https://docs.livekit.io/agents/models/avatar/plugins/hedra
-    # )
-    # # Start the avatar and wait for it to join
-    # await avatar.start(session, room=ctx.room)
-
-    # Start the session, which initializes the voice pipeline and warms up the models
     await session.start(
-        agent=Assistant(instructions=instructions, user_id=user_id),
+        agent=Assistant(
+            instructions=instructions,
+            user_id=user_id,
+        ),
         room=ctx.room,
         room_options=room_io.RoomOptions(
             audio_input=room_io.AudioInputOptions(
