@@ -1,0 +1,22 @@
+[
+  {
+    "reference_id": "ESC-4JEL56",
+    "user_id": "user_b708b470-4bde-4eb3-b121-4480d05abeaf",
+    "name": "Shree",
+    "issue_summary": "User is having difficulty in breathing.",
+    "urgency": "emergency",
+    "language": "english",
+    "follow_up_preference": "not specified",
+    "created_at": "2026-08-12T16:48:47.333425"
+  },
+  {
+    "reference_id": "ESC-H9G725",
+    "user_id": "user_b708b470-4bde-4eb3-b121-4480d05abeaf",
+    "name": "Shree",
+    "issue_summary": "User asked for a diagnosis of pneumonia.",
+    "urgency": "urgent",
+    "language": "english",
+    "follow_up_preference": "not specified",
+    "created_at": "2026-08-12T17:47:25.210900"
+  }
+]

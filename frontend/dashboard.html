@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Care Voice Dashboard</title>
+<style>
+body{
+font-family:Arial;
+background:#0f172a;
+color:white;
+padding:30px;
+}
+.card{
+background:#1e293b;
+padding:20px;
+margin:10px;
+border-radius:12px;
+}
+</style>
+</head>
+<body>
+
+<h1>Care Voice Dashboard</h1>
+
+<div id="tickets"></div>
+
+<script>
+fetch("http://127.0.0.1:8000/escalations")
+.then(r=>r.json())
+.then(data=>{
+let html="";
+data.forEach(t=>{
+html+=`
+<div class="card">
+<h3>${t.reference_id}</h3>
+<p><b>Name:</b> ${t.name}</p>
+<p><b>Issue:</b> ${t.issue_summary}</p>
+<p><b>Urgency:</b> ${t.urgency}</p>
+</div>`;
+});
+document.getElementById("tickets").innerHTML=html;
+});
+</script>
+
+</body>
+</html>

@@ -1,4 +1,10 @@
 import logging
+import json
+import os
+import random
+import string
+import uuid
+from datetime import datetime
 
 from dotenv import load_dotenv
 from livekit import rtc
@@ -22,6 +28,29 @@ from livekit.plugins.turn_detector.multilingual import MultilingualModel
 logger = logging.getLogger("agent")
 
 load_dotenv(".env.local")
+
+
+ESCALATIONS_FILE = "escalations.json"
+
+
+def generate_reference_id() -> str:
+    """Generate a short, human-readable escalation reference ID, e.g. ESC-AB12CD."""
+    suffix = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    return f"ESC-{suffix}"
+
+
+def save_escalation(record: dict) -> None:
+    """Append an escalation record to a local JSON file (simplest durable store)."""
+    data = []
+    if os.path.exists(ESCALATIONS_FILE):
+        with open(ESCALATIONS_FILE, "r", encoding="utf-8") as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                data = []
+    data.append(record)
+    with open(ESCALATIONS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
 
 SYSTEM_PROMPT = """
@@ -94,13 +123,48 @@ Never:
 - Claim to be a doctor
 - Guarantee medical outcomes
 
-ESCALATION
+HUMAN ESCALATION
 
-If the user mentions chest pain, severe bleeding, breathing difficulty,
-loss of consciousness, stroke symptoms, or suicidal thoughts:
+Trigger escalation for:
+- chest pain
+- breathing difficulty
+- severe bleeding
+- loss of consciousness
+- stroke symptoms
+- suicidal thoughts
+- the user asking you for a diagnosis
 
-"This may require immediate medical attention.
-Please contact a doctor, family member, caregiver, or visit the nearest hospital immediately."
+When triggered:
+
+1. If it is a medical emergency (chest pain, breathing difficulty, severe
+   bleeding, loss of consciousness, stroke symptoms, suicidal thoughts), say:
+
+   "This may require immediate medical attention. Please contact a doctor,
+   family member, caregiver, or visit the nearest hospital immediately."
+
+2. Then, regardless of emergency or diagnosis-request, ask permission before
+   creating any escalation record:
+
+   "I may need to create a request for a healthcare professional.
+   I would share: your name, issue summary, and urgency level.
+   Do I have your permission?"
+
+3. Only after the user says yes, call create_escalation with their name,
+   a short factual issue summary (no diagnosis), urgency level, the
+   language they've been speaking, and their follow-up preference if
+   they've stated one (otherwise "not specified").
+
+4. After the tool returns, speak the reference ID clearly and tell them
+   the honest next step: a healthcare professional or caregiver will
+   follow up, and if it's an emergency they should not wait for that
+   follow-up — they should seek help immediately.
+
+5. If the user says no, do not call create_escalation. Respect their answer
+   and do not ask again in the same session unless new emergency symptoms
+   come up.
+
+Never mention the internal tool name. Never diagnose. Never guess a
+diagnosis instead of escalating.
 
 STYLE
 
@@ -208,6 +272,48 @@ class Assistant(Agent):
             "No emergency symptom was detected by this basic rule-based "
             "check. Monitor the symptoms and consult a healthcare "
             "professional if they persist or worsen."
+        )
+
+    @function_tool
+    async def create_escalation(
+        self,
+        context: RunContext,
+        name: str,
+        issue_summary: str,
+        urgency: str,
+        language: str,
+        follow_up_preference: str,
+    ) -> str:
+        """Create a human escalation request. Call this ONLY after the user
+        has explicitly said yes to sharing their information.
+
+        Args:
+            name: The user's name.
+            issue_summary: A short, factual summary of what was reported —
+                symptoms or the request — with no diagnosis or medical judgment.
+            urgency: One of "emergency", "urgent", or "routine".
+            language: The language the user has been speaking, e.g. "kannada",
+                "hindi", or "english".
+            follow_up_preference: How the user wants to be contacted, e.g.
+                "phone call", "family member", "visit hospital", or
+                "not specified".
+        """
+        reference_id = generate_reference_id()
+        record = {
+            "reference_id": reference_id,
+            "user_id": self.user_id,
+            "name": name,
+            "issue_summary": issue_summary,
+            "urgency": urgency,
+            "language": language,
+            "follow_up_preference": follow_up_preference,
+            "created_at": datetime.utcnow().isoformat(),
+        }
+        save_escalation(record)
+        logger.info(f"Created escalation {reference_id} for user {self.user_id}")
+        return (
+            f"Escalation created. Reference ID: {reference_id}. "
+            "A healthcare professional or caregiver contact will follow up."
         )
 
 
