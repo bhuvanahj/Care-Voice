@@ -1,0 +1,42 @@
+[
+  {
+    "call_id": "905eb215-7fe1-492b-98f7-2ca9545d6a7f",
+    "started_at": "2026-08-13T16:13:48.369701",
+    "ended_at": "2026-08-13T16:13:54.360636",
+    "duration_seconds": 6.0,
+    "status": "completed",
+    "success": true,
+    "escalation_created": false,
+    "escalation_reference_id": null
+  },
+  {
+    "call_id": "35ea6ccd-1e7e-41c8-b25d-52afc6fc43d9",
+    "started_at": "2026-08-13T16:25:29.074286",
+    "ended_at": "2026-08-13T16:25:35.020662",
+    "duration_seconds": 5.9,
+    "status": "completed",
+    "success": true,
+    "escalation_created": false,
+    "escalation_reference_id": null
+  },
+  {
+    "call_id": "c8666054-d01e-4730-ab2c-beddfccef871",
+    "started_at": "2026-08-13T16:30:15.801870",
+    "ended_at": "2026-08-13T16:30:17.274539",
+    "duration_seconds": 1.5,
+    "status": "failed",
+    "success": false,
+    "escalation_created": false,
+    "escalation_reference_id": null
+  },
+  {
+    "call_id": "547eddcd-58b4-42a4-9eef-1022d628961c",
+    "started_at": "2026-08-13T16:31:27.138658",
+    "ended_at": "2026-08-13T16:31:32.764513",
+    "duration_seconds": 5.6,
+    "status": "completed",
+    "success": true,
+    "escalation_created": false,
+    "escalation_reference_id": null
+  }
+]

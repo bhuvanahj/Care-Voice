@@ -156,3 +156,8 @@
 .cv-breathe {
   animation: cv-breathe 2.4s ease-in-out infinite;
 }
+
+/* Day 8: Call Analytics Dashboard accent (additive, dark mode only) */
+.dark {
+  --cv-teal: oklch(0.72 0.13 195);
+}

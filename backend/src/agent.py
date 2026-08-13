@@ -31,6 +31,7 @@ load_dotenv(".env.local")
 
 
 ESCALATIONS_FILE = "escalations.json"
+CALLS_FILE = "calls.json"
 
 
 def generate_reference_id() -> str:
@@ -50,6 +51,25 @@ def save_escalation(record: dict) -> None:
                 data = []
     data.append(record)
     with open(ESCALATIONS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def save_call(record: dict) -> None:
+    """Append a call-analytics record to a local JSON file.
+
+    Intentionally holds no transcript, symptom text, OTP/PIN, or account
+    data — only call lifecycle facts needed for Total/Successful/Failed
+    and non-sensitive call history.
+    """
+    data = []
+    if os.path.exists(CALLS_FILE):
+        with open(CALLS_FILE, "r", encoding="utf-8") as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                data = []
+    data.append(record)
+    with open(CALLS_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
@@ -180,9 +200,13 @@ the current session and use it to provide more personalized reminders.
 
 
 class Assistant(Agent):
-    def __init__(self, instructions: str, user_id: str) -> None:
+    def __init__(self, instructions: str, user_id: str, call_record: dict) -> None:
         super().__init__(instructions=instructions)
         self.user_id = user_id
+        # Mutable dict shared with the calling job function so this session
+        # can report back whether an escalation was created, without the
+        # call log ever containing transcript or symptom text.
+        self.call_record = call_record
 
     @function_tool
     async def save_memory(
@@ -310,6 +334,13 @@ class Assistant(Agent):
             "created_at": datetime.utcnow().isoformat(),
         }
         save_escalation(record)
+
+        # Feed back into this call's analytics record — this is what lets
+        # the dashboard mark the call as a successful "appropriate
+        # escalation created" outcome rather than just "completed".
+        self.call_record["escalation_created"] = True
+        self.call_record["escalation_reference_id"] = reference_id
+
         logger.info(f"Created escalation {reference_id} for user {self.user_id}")
         return (
             f"Escalation created. Reference ID: {reference_id}. "
@@ -333,15 +364,25 @@ async def my_agent(ctx: JobContext):
         "room": ctx.room.name,
     }
 
-    await ctx.connect()
+    # --- Call analytics tracking (Day 8) -----------------------------
+    # One record per call, written in `finally` so it's captured whether
+    # the call completes normally or the session raises/disconnects.
+    call_id = str(uuid.uuid4())
+    started_at = datetime.utcnow()
+    call_status = "failed"
+    call_record = {"escalation_created": False, "escalation_reference_id": None}
+    # -------------------------------------------------------------------
 
-    participant = await ctx.wait_for_participant()
-    user_id = participant.identity
+    try:
+        await ctx.connect()
 
-    existing = get_user_memory(user_id)
+        participant = await ctx.wait_for_participant()
+        user_id = participant.identity
 
-    if existing:
-        memory_block = f"""
+        existing = get_user_memory(user_id)
+
+        if existing:
+            memory_block = f"""
 RETURNING USER CONTEXT
 
 This user has spoken with you before.
@@ -356,8 +397,8 @@ Do not ask the consent question again this session unless they
 share new information. If they share new information, confirm
 consent before calling save_memory again.
 """
-    else:
-        memory_block = """
+        else:
+            memory_block = """
 NEW USER
 
 You have no memory of this user yet.
@@ -375,46 +416,73 @@ If they say no, do not save anything and do not ask again
 this session.
 """
 
-    instructions = SYSTEM_PROMPT + "\n" + memory_block
+        instructions = SYSTEM_PROMPT + "\n" + memory_block
 
-    session = AgentSession(
-        stt=deepgram.STT(
-            model="nova-3",
-            language="multi",
-        ),
-        llm=google.LLM(
-            model="gemini-2.5-flash",
-        ),
-        tts=murf.TTS(
-            voice="Pooja",
-            style="Conversation",
-            tokenizer=tokenize.basic.SentenceTokenizer(
-                min_sentence_len=2
+        session = AgentSession(
+            stt=deepgram.STT(
+                model="nova-3",
+                language="multi",
             ),
-            text_pacing=True,
-        ),
-        turn_detection=MultilingualModel(),
-        vad=ctx.proc.userdata["vad"],
-        preemptive_generation=True,
-    )
+            llm=google.LLM(
+                model="gemini-2.5-flash",
+            ),
+            tts=murf.TTS(
+                voice="Pooja",
+                style="Conversation",
+                tokenizer=tokenize.basic.SentenceTokenizer(
+                    min_sentence_len=2
+                ),
+                text_pacing=True,
+            ),
+            turn_detection=MultilingualModel(),
+            vad=ctx.proc.userdata["vad"],
+            preemptive_generation=True,
+        )
 
-    await session.start(
-        agent=Assistant(
-            instructions=instructions,
-            user_id=user_id,
-        ),
-        room=ctx.room,
-        room_options=room_io.RoomOptions(
-            audio_input=room_io.AudioInputOptions(
-                noise_cancellation=lambda params: (
-                    noise_cancellation.BVCTelephony()
-                    if params.participant.kind
-                    == rtc.ParticipantKind.PARTICIPANT_KIND_SIP
-                    else noise_cancellation.BVC()
+        await session.start(
+            agent=Assistant(
+                instructions=instructions,
+                user_id=user_id,
+                call_record=call_record,
+            ),
+            room=ctx.room,
+            room_options=room_io.RoomOptions(
+                audio_input=room_io.AudioInputOptions(
+                    noise_cancellation=lambda params: (
+                        noise_cancellation.BVCTelephony()
+                        if params.participant.kind
+                        == rtc.ParticipantKind.PARTICIPANT_KIND_SIP
+                        else noise_cancellation.BVC()
+                    ),
                 ),
             ),
-        ),
-    )
+        )
+
+        call_status = "completed"
+
+    except Exception:
+        call_status = "failed"
+        logger.exception(f"Call {call_id} ended with an error")
+        raise
+
+    finally:
+        ended_at = datetime.utcnow()
+        duration_seconds = round((ended_at - started_at).total_seconds(), 1)
+        save_call(
+            {
+                "call_id": call_id,
+                "started_at": started_at.isoformat(),
+                "ended_at": ended_at.isoformat(),
+                "duration_seconds": duration_seconds,
+                "status": call_status,
+                # Health Access success = call completed (safe guidance
+                # delivered), whether or not an escalation was also
+                # appropriately created along the way.
+                "success": call_status == "completed",
+                "escalation_created": call_record["escalation_created"],
+                "escalation_reference_id": call_record["escalation_reference_id"],
+            }
+        )
 
 
 if __name__ == "__main__":
