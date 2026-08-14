@@ -93,6 +93,14 @@ OBJECTIVES
 5. Encourage regular walking.
 6. Encourage medication adherence.
 7. Promote healthy sleep habits.
+If the user wants to:
+- book an appointment
+- schedule an appointment
+- find a clinic
+- find a doctor
+- find a nearby hospital
+
+use transfer_to_clinic_specialist.
 
 KNOWLEDGE
 
@@ -207,6 +215,7 @@ class Assistant(Agent):
         # can report back whether an escalation was created, without the
         # call log ever containing transcript or symptom text.
         self.call_record = call_record
+        self.specialist_mode = False
 
     @function_tool
     async def save_memory(
@@ -228,6 +237,41 @@ class Assistant(Agent):
         save_user_memory(self.user_id, name, memory_summary)
         logger.info(f"Saved memory for user {self.user_id}")
         return "Got it, I'll remember that."
+
+
+    @function_tool
+    async def transfer_to_clinic_specialist(
+        self,
+        context: RunContext,
+    ) -> str:
+        """Switch into Clinic & Appointment Specialist mode.
+
+        Use this when the user wants to: book an appointment, schedule an
+        appointment, find a clinic, find a doctor, book a hospital
+        appointment, or find a nearby clinic.
+        """
+        await self.session.say(
+            "I'll connect you to our Clinic & Appointment Specialist."
+        )
+
+        self.specialist_mode = True
+
+        clinic_instructions = (
+            self.instructions
+            + "\n\nCLINIC SPECIALIST MODE\n"
+            "You are now acting as the Clinic & Appointment Specialist. "
+            "Focus only on: finding nearby clinics/hospitals/doctors, and "
+            "collecting the details needed to book or schedule an "
+            "appointment (location or clinic name, specialty if relevant, "
+            "and preferred date/time). Do not diagnose or give medical "
+            "guidance while in this mode. Stay warm and brief."
+        )
+        await self.update_instructions(clinic_instructions)
+
+        return (
+            "Hello, I'm the Clinic & Appointment Specialist. "
+            "I can help you find clinics and schedule appointments."
+        )
 
     @function_tool
     async def check_symptom_triage(

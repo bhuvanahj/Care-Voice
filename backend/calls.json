@@ -38,5 +38,135 @@
     "success": true,
     "escalation_created": false,
     "escalation_reference_id": null
+  },
+  {
+    "call_id": "3a4e2a12-e39b-4504-b0e1-da5e90fb4787",
+    "started_at": "2026-08-14T16:25:43.316823",
+    "ended_at": "2026-08-14T16:25:52.433724",
+    "duration_seconds": 9.1,
+    "status": "completed",
+    "success": true,
+    "escalation_created": false,
+    "escalation_reference_id": null
+  },
+  {
+    "call_id": "327c2350-6dff-4d86-be13-123b92fa0c5e",
+    "started_at": "2026-08-14T16:27:55.803909",
+    "ended_at": "2026-08-14T16:28:02.038313",
+    "duration_seconds": 6.2,
+    "status": "completed",
+    "success": true,
+    "escalation_created": false,
+    "escalation_reference_id": null
+  },
+  {
+    "call_id": "0347f9dc-138b-48d8-9664-e9178b8ecc0a",
+    "started_at": "2026-08-14T16:37:53.597720",
+    "ended_at": "2026-08-14T16:38:00.850535",
+    "duration_seconds": 7.3,
+    "status": "completed",
+    "success": true,
+    "escalation_created": false,
+    "escalation_reference_id": null
+  },
+  {
+    "call_id": "7e593492-24e6-4766-80a6-33878ba2dee3",
+    "started_at": "2026-08-14T16:41:31.525668",
+    "ended_at": "2026-08-14T16:41:45.981371",
+    "duration_seconds": 14.5,
+    "status": "failed",
+    "success": false,
+    "escalation_created": false,
+    "escalation_reference_id": null
+  },
+  {
+    "call_id": "27327116-c4ed-4abc-9139-b85a6e81796c",
+    "started_at": "2026-08-14T16:42:00.178783",
+    "ended_at": "2026-08-14T16:42:04.313964",
+    "duration_seconds": 4.1,
+    "status": "completed",
+    "success": true,
+    "escalation_created": false,
+    "escalation_reference_id": null
+  },
+  {
+    "call_id": "b7a23ecd-6be1-4b8a-9909-576f2fe6e488",
+    "started_at": "2026-08-14T17:12:15.908753",
+    "ended_at": "2026-08-14T17:12:20.278738",
+    "duration_seconds": 4.4,
+    "status": "failed",
+    "success": false,
+    "escalation_created": false,
+    "escalation_reference_id": null
+  },
+  {
+    "call_id": "796755cb-a173-4f26-941f-466473bb3c11",
+    "started_at": "2026-08-14T17:19:35.688754",
+    "ended_at": "2026-08-14T17:19:41.003662",
+    "duration_seconds": 5.3,
+    "status": "completed",
+    "success": true,
+    "escalation_created": false,
+    "escalation_reference_id": null
+  },
+  {
+    "call_id": "8ab965f9-d5e5-42ff-b4b9-ae97b5bb01f4",
+    "started_at": "2026-08-14T17:39:31.859351",
+    "ended_at": "2026-08-14T17:39:40.629102",
+    "duration_seconds": 8.8,
+    "status": "failed",
+    "success": false,
+    "escalation_created": false,
+    "escalation_reference_id": null
+  },
+  {
+    "call_id": "76021cd0-d21c-462f-9085-4aabbb3047f8",
+    "started_at": "2026-08-14T17:46:13.072300",
+    "ended_at": "2026-08-14T17:46:19.891365",
+    "duration_seconds": 6.8,
+    "status": "completed",
+    "success": true,
+    "escalation_created": false,
+    "escalation_reference_id": null
+  },
+  {
+    "call_id": "8d9c0245-77d9-42b5-aada-363d2e75bb9f",
+    "started_at": "2026-08-14T17:55:32.699973",
+    "ended_at": "2026-08-14T17:55:41.636069",
+    "duration_seconds": 8.9,
+    "status": "completed",
+    "success": true,
+    "escalation_created": false,
+    "escalation_reference_id": null
+  },
+  {
+    "call_id": "6bead962-5164-4692-abe6-7448c2b003a0",
+    "started_at": "2026-08-14T18:01:00.606140",
+    "ended_at": "2026-08-14T18:01:09.986519",
+    "duration_seconds": 9.4,
+    "status": "completed",
+    "success": true,
+    "escalation_created": false,
+    "escalation_reference_id": null
+  },
+  {
+    "call_id": "a495033e-bd2c-4f9f-8565-b837c8f06191",
+    "started_at": "2026-08-14T18:05:04.944339",
+    "ended_at": "2026-08-14T18:05:13.011343",
+    "duration_seconds": 8.1,
+    "status": "completed",
+    "success": true,
+    "escalation_created": false,
+    "escalation_reference_id": null
+  },
+  {
+    "call_id": "bd668f36-7bfc-4618-9159-85c271fa1deb",
+    "started_at": "2026-08-14T18:10:43.565592",
+    "ended_at": "2026-08-14T18:10:52.414365",
+    "duration_seconds": 8.8,
+    "status": "completed",
+    "success": true,
+    "escalation_created": false,
+    "escalation_reference_id": null
   }
 ]
