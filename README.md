@@ -1,18 +1,27 @@
-# Voice Agent Starter — Powered by Murf Falcon
+# Care Voice
 
-Build a production voice AI agent in 5 minutes. Powered by the fastest TTS on the market - swap the system prompt to build anything from customer support to language tutors.
+Care Voice is a voice-based healthcare assistant built for the **10 Days of Voice Agents: VoiceForBharat Edition**.
+
+It helps users interact with healthcare services through natural voice conversations, including symptom triage, human escalation, appointment assistance, call analytics, and specialist agent handoff.
+
+Built with **Murf Falcon, Deepgram, Gemini, LiveKit, FastAPI, Python, and Next.js**.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Murf Falcon](https://img.shields.io/badge/TTS-Murf%20Falcon-6366F1)](https://murf.ai/api/docs/text-to-speech/streaming) [![LiveKit](https://img.shields.io/badge/Transport-LiveKit-002cf2)](https://docs.livekit.io) [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 
 ---
 
-## Why Murf Falcon
+## Features
 
-- **55ms model latency** - fastest production TTS
-- **130ms time-to-first-audio** across 10+ global regions
-- **$0.01/1000 characters** - up to 10x cheaper than alternatives
-- **150+ voices** across 35+ languages
-- **99.38% pronunciation accuracy**
+- Voice-based healthcare assistance
+- Indian language conversations
+- Symptom triage using a rule-based tool
+- Safety guardrails
+- Memory for returning users
+- Human escalation with confirmation IDs
+- Outbound voice calling
+- Call Analytics Dashboard
+- Clinic & Appointment Specialist handoff
+- Real-time voice responses powered by Murf Falcon
 
 ---
 
@@ -34,44 +43,9 @@ flowchart LR
     style F fill:#444441,stroke:#888780,color:#fff
 ```
 
----
----
 
-## Day 5 — Tool Calling
 
-Care Voice now includes a `check_symptom_triage` function tool that helps
-evaluate user-reported symptoms and determine an appropriate triage level.
 
-The agent can automatically call the tool when a user's symptoms require
-triage and then explain the result naturally through voice.
-
-### Data Source
-
-The symptom triage tool currently uses a **local rule-based dataset**.
-It does not depend on a live external healthcare API.
-
-### Failure Handling
-
-If the tool cannot determine an appropriate result, Care Voice provides a
-safe fallback response instead of inventing medical information and
-encourages the user to seek professional medical advice when appropriate.
-
-### Example
-
-User: "I have a cough."
-
-The agent automatically calls:
-
-`check_symptom_triage(symptoms="cough")`
-
-The result is then passed back to the agent and delivered naturally through
-Murf Falcon voice.
-
-### Day 5 Test
-
-The tool was successfully tested through a real voice interaction, with
-the agent automatically calling `check_symptom_triage` based on the user's
-reported symptom.
 
 ---
 ## Quickstart
