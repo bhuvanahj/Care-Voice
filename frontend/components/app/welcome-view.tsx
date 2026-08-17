@@ -333,8 +333,8 @@ export const WelcomeView = ({
               {/* Feature list */}
               {[
                 { icon: '🎙️', text: 'Speak naturally in Kannada or English' },
-{ icon: '🩺', text: 'Health guidance through voice' },
-{ icon: '🔒', text: 'Private and secure conversations' },
+{ icon: '🩺', text: 'Voice-based health assistance' },
+{ icon: '🔒', text: ' Privacy-aware interactions' },
 { icon: '⚡', text: 'Real-time AI voice responses' },
               ].map((f, i) => (
                 <motion.div
@@ -360,7 +360,7 @@ export const WelcomeView = ({
 
               {/* Tech stack pills */}
               <div className="flex flex-wrap gap-1.5 mt-4">
-                {['Murf Falcon', 'Deepgram', 'Groq LLaMA', 'LiveKit'].map((t) => (
+                {['Murf Falcon', 'Deepgram', 'Gemini', 'LiveKit'].map((t) => (
                   <span key={t} className="px-2 py-0.5 rounded-full text-xs border border-border/50 text-muted-foreground bg-background/50">
                     {t}
                   </span>
